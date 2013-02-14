@@ -1,6 +1,6 @@
 <?php
 
-abstract class SEH_Email_Encoding_Header
+abstract class XXX_Email_Encoding_Header
 {
 	public static function encodeHeader ($header, $headerData, $encoding = 'B')
 	{

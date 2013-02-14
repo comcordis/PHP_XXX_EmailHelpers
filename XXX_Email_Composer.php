@@ -11,7 +11,7 @@ And a notice to add the sending address to the address book.
 To fix this, you need to log in to your DNS settings, wherever they may be, and set up MX records that point to the same IP address PHP sends mail from. You can check the IP address of your current records at www.mxtoolbox.com.
 
 */
-class SEH_Email_Composer
+class XXX_Email_Composer
 {
 	protected $messageID;
 	
@@ -277,7 +277,7 @@ class SEH_Email_Composer
 
 			$result .= $this->startEmbeddedFilePartHeader($this->files['embedded'][$i]['file'], $this->files['embedded'][$i]['contentID'], $this->files['embedded'][$i]['mimeType'], $this->files['embedded'][$i]['encoding']);
 
-			$result .= SEH_Email_Encoding_Body::encode($this->files['embedded'][$i]['data'], $this->files['embedded'][$i]['encoding']);
+			$result .= XXX_Email_Encoding_Body::encode($this->files['embedded'][$i]['data'], $this->files['embedded'][$i]['encoding']);
 
 			$result .= self::$lineSeparator . self::$lineSeparator;
 		}
@@ -295,7 +295,7 @@ class SEH_Email_Composer
 
 			$result .= $this->startEmbeddedFilePartHeader($this->files['attached'][$i]['file'], $this->files['attached'][$i]['mimeType'], $this->files['attached'][$i]['encoding']);
 
-			$result .= SEH_Email_Encoding_Body::encode($this->files['attached'][$i]['data'], $this->files['attached'][$i]['encoding']);
+			$result .= XXX_Email_Encoding_Body::encode($this->files['attached'][$i]['data'], $this->files['attached'][$i]['encoding']);
 
 			$result .= self::$lineSeparator . self::$lineSeparator;
 		}
@@ -436,14 +436,14 @@ class SEH_Email_Composer
 		// Plain only
 		if ($this->messageType['plain'] && (!$this->messageType['html'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
 		{
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 		}
 		// Plain only with embedded files
 		else if ($this->messageType['plain'] && $this->messageType['embedded'] && (!$this->messageType['html'] && !$this->messageType['attached']))
 		{
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeEmbeddedFiles(0);
@@ -455,7 +455,7 @@ class SEH_Email_Composer
 		{
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeAttachedFiles(0);
@@ -470,7 +470,7 @@ class SEH_Email_Composer
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeEmbeddedFiles(1);
@@ -485,14 +485,14 @@ class SEH_Email_Composer
 		// HTML only
 		else if ($this->messageType['html'] && (!$this->messageType['plain'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
 		{
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 		}
 		// HTML only with embedded files
 		else if ($this->messageType['html'] && $this->messageType['embedded'] && (!$this->messageType['plain'] && !$this->messageType['attached']))
 		{
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeEmbeddedFiles(0);
@@ -504,7 +504,7 @@ class SEH_Email_Composer
 		{
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeAttachedFiles(0);
@@ -519,7 +519,7 @@ class SEH_Email_Composer
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->composeEmbeddedFiles(1);
@@ -536,12 +536,12 @@ class SEH_Email_Composer
 		{
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->startBoundary(0);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->endBoundary(0);
@@ -554,12 +554,12 @@ class SEH_Email_Composer
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->endBoundary(1);
@@ -576,12 +576,12 @@ class SEH_Email_Composer
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->startBoundary(1);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->endBoundary(1);
@@ -601,12 +601,12 @@ class SEH_Email_Composer
 
 			$result .= $this->startBoundary(2);
 			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->startBoundary(2);
 			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= SEH_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
 			$result .= self::$lineSeparator . self::$lineSeparator;
 
 			$result .= $this->endBoundary(2);
@@ -629,7 +629,7 @@ class SEH_Email_Composer
 	{
 		$result = $this->subject;
 
-		$result = SEH_Email_Encoding_Header::encodeHeader('Subject', XXX_String::removeLineSeparators(XXX_String::normalizeLineSeparators($result)), $this->defaultHeaderEncoding);
+		$result = XXX_Email_Encoding_Header::encodeHeader('Subject', XXX_String::removeLineSeparators(XXX_String::normalizeLineSeparators($result)), $this->defaultHeaderEncoding);
 
 		$result = XXX_String::getPart($result, 8, XXX_String::getCharacterLength($result));
 
@@ -776,7 +776,7 @@ class SEH_Email_Composer
 
 	public function send ()
 	{
-		return SEH_Email_Sender::sendEmail($this);
+		return XXX_Email_Sender::sendEmail($this);
 	}
 }
 

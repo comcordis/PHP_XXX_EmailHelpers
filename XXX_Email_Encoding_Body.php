@@ -1,6 +1,6 @@
 <?php
 
-abstract class SEH_Email_Encoding_Body
+abstract class XXX_Email_Encoding_Body
 {
 	public static function encode ($bodyData = '', $encoding = 'base64')
 	{
@@ -156,7 +156,7 @@ abstract class SEH_Email_Encoding_Body
 		47 v
 		48 w
 		49 x
-		50 ySEH_Email_Composer::$lineSeparator
+		50 yXXX_Email_Composer::$lineSeparator
 		51 z
 		52 0
 		53 1
@@ -180,7 +180,7 @@ abstract class SEH_Email_Encoding_Body
 			
 			$encoded = XXX_String_Base64::encode($encoded);
 			
-			$encoded = chunk_split($encoded, $maximumLineLength, SEH_Email_Composer::$lineSeparator);
+			$encoded = chunk_split($encoded, $maximumLineLength, XXX_Email_Composer::$lineSeparator);
 			
 			$encoded = XXX_String::trim($encoded);
 			
@@ -261,7 +261,7 @@ abstract class SEH_Email_Encoding_Body
 		{
 			$encoded = XXX_String::normalizeLineSeparators($bodyData);
 			
-			$lines = XXX_String::splitToArray($encoded, SEH_Email_Composer::$lineSeparator);
+			$lines = XXX_String::splitToArray($encoded, XXX_Email_Composer::$lineSeparator);
 			$linesTotal = XXX_Array::getFirstLevelItemTotal($lines);
 			
 			$encoded = '';
@@ -324,16 +324,16 @@ abstract class SEH_Email_Encoding_Body
 					if ($newLineLength >= $maximumLineLength)
 					{
 						// Soft line break
-						$encoded .= $newLine . '=' . SEH_Email_Composer::$lineSeparator;
+						$encoded .= $newLine . '=' . XXX_Email_Composer::$lineSeparator;
 						$newLine = '';
 					}
 					$newLine .= $character;
 				}
 				
-				$encoded .= $newLine . SEH_Email_Composer::$lineSeparator;
+				$encoded .= $newLine . XXX_Email_Composer::$lineSeparator;
 			}
 			// Remove trailing line separator
-			$encoded = XXX_String::getPart($encoded, 0, (-1 * XXX_String::getCharacterLength(SEH_Email_Composer::$lineSeparator)));
+			$encoded = XXX_String::getPart($encoded, 0, (-1 * XXX_String::getCharacterLength(XXX_Email_Composer::$lineSeparator)));
 			
 			return $encoded;
 		}
@@ -353,7 +353,7 @@ abstract class SEH_Email_Encoding_Body
 			$decoded = XXX_String::normalizeLineSeparators($bodyData);
 			
 			// Remove soft line breaks
-			$decoded = XXX_String_Pattern::replace($decoded, '=' . SEH_Email_Composer::$lineSeparator, '');
+			$decoded = XXX_String_Pattern::replace($decoded, '=' . XXX_Email_Composer::$lineSeparator, '');
 					
 			// Decode all characters
 			$decoded = XXX_String_Pattern::replace($decoded, '(=([0-9a-f]{2}))', 'ie', 'XXX_String::asciiCodePointToCharacter(XXX_Number::convertHexadecimalToDecimal("\\1"))');

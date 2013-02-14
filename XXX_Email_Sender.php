@@ -1,6 +1,6 @@
 <?php
 
-abstract class SEH_Email_Sender
+abstract class XXX_Email_Sender
 {
 	public static function sendEmail ($email)
 	{
