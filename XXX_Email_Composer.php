@@ -51,9 +51,11 @@ class XXX_Email_Composer
 
 	public $composed = array
 	(
-		'header' => '',
+		'headers' => '',
 		'body' => ''
 	);
+	
+	public $isComposed = false;
 
 	protected $priority = 'normal';
 	
@@ -75,8 +77,7 @@ class XXX_Email_Composer
 	public function __construct ()
 	{
 		self::$lineSeparator = XXX_OperatingSystem::$lineSeparator;
-		//self::$lineSeparator = "\n";
-		
+				
 		$this->createMessageID();
 		$this->createBoundaries();
 	}
@@ -90,32 +91,6 @@ class XXX_Email_Composer
 		$uniqueHash = XXX_String::getRandomHash();
 		
 		$this->messageID = $uniqueHash . '@' . XXX_OperatingSystem::$hostname;
-	}
-
-	public static function createDate ()
-	{
-		$result = date(DATE_RFC2822);
-
-		if ($result === false || empty($result))
-		{
-			$result = date('r');
-		}
-
-		if ($result === false || empty($result))
-		{
-			// Get timezone offset in seconds
-			$timezoneOffset = date('Z');
-			// Determine wether it's a negative or positive number
-			$timezonePrefix = ($timezoneOffset < 0) ? "-" : "+";
-			// Get the absolute number without prefixed - or +
-			$timezoneOffset = abs($timezoneOffset);
-			// Calculate the number of hours
-			$timezoneOffset = ((($timezoneOffset / 3600) * 100) + (($timezoneOffset % 3600) / 60));
-			// Construct the full date string
-			$result = sprintf("%s %s%04d", date("D, j M Y H:i:s"), $timezonePrefix, $timezoneOffset);
-		}
-
-		return $result;
 	}
 
 	////////////////////
@@ -306,7 +281,11 @@ class XXX_Email_Composer
 	public function composeHeaders ()
 	{
 		$this->determineMessageType();
-
+		
+		$this->composed['sender'] = $this->composeAddress($this->sender);
+		$this->composed['errorReceiver'] = $this->composeAddress($this->errorReceiver);
+		$this->composed['replyReceiver'] = $this->composeAddress($this->replyReceiver);
+		
 		// Avoid spaces with the comma
 		$this->composed['receivers'] = XXX_Array::joinValuesToString($this->composeAddresses($this->receivers), ',');
 		$this->composed['ccReceivers'] = XXX_Array::joinValuesToString($this->composeAddresses($this->ccReceivers), ',');
@@ -314,28 +293,37 @@ class XXX_Email_Composer
 		
 		$result = '';
 
-		$result .= 'Date: ' . $this->createDate() . self::$lineSeparator;
+		$result .= 'Date: ' . XXX_I18n_Formatter::formatRFC2822() . self::$lineSeparator;
 
 		$result .= 'Message-ID: <' . $this->messageID . '>' . self::$lineSeparator;
 
-		$result .= 'From: ' . $this->composeAddress($this->sender) . self::$lineSeparator;
+		// Email address (On behalf of) - Human friendly
+		$result .= 'From: ' . $this->composed['sender'] . self::$lineSeparator;
+		
+		// Actual sending server - Server friendly
+		$result .= 'Sender: ' . $this->composed['sender'] . self::$lineSeparator;
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
 		$result .= 'Organization: ' . $this->organization . self::$lineSeparator;
 		
-		$result .= 'Errors-To: ' . $this->composeAddress($this->errorReceiver) . self::$lineSeparator;
-		$result .= 'Return-Path: ' . $this->composeAddress($this->errorReceiver) . self::$lineSeparator;
+		$result .= 'Errors-To: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
+		$result .= 'Return-Path: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
 		
-		$result .= 'Reply-To: ' . $this->composeAddress($this->replyReceiver) . self::$lineSeparator;
+		$result .= 'Reply-To: ' . $this->composed['replyReceiver'] . self::$lineSeparator;
+		
+		if ($this->composed['receivers'] != '')
+		{
+			$result .= 'To: ' . $this->composed['receivers'] . self::$lineSeparator;
+		}
 		
 		if ($this->composed['ccReceivers'] != '')
 		{
-			$result .= 'CC: ' . $this->composed['ccReceivers'] . self::$lineSeparator;
+			$result .= 'Cc: ' . $this->composed['ccReceivers'] . self::$lineSeparator;
 		}
 		
 		if ($this->composed['bccReceivers'] != '')
 		{
-			$result .= 'BCC: ' . $this->composed['bccReceivers'] . self::$lineSeparator;
+			$result .= 'Bcc: ' . $this->composed['bccReceivers'] . self::$lineSeparator;
 		}
 		
 		$result .= 'MIME-Version: 1.0' . self::$lineSeparator;
@@ -358,70 +346,80 @@ class XXX_Email_Composer
 				$result .= 'Importance: Low' . self::$lineSeparator;
 			break;
 		}
-
-		// Plain only
-		if ($this->messageType['plain'] && (!$this->messageType['html'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
+		
+		// Plain (no HTML)
+		if ($this->messageType['plain'] && !$this->messageType['html'])
 		{
-			$result .= $this->startMainDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/related');
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// No files
+			else
+			{
+				$result .= $this->startMainDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+			}
 		}
-		// Plain only with embedded files
-		else if ($this->messageType['plain'] && $this->messageType['embedded'] && (!$this->messageType['html'] && !$this->messageType['attached']))
+		// HTML (no plain)
+		else if ($this->messageType['html'] && !$this->messageType['plain'])
 		{
-			$result .= $this->startLevel(0, 'multipart/related');
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/related');
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// No files
+			else
+			{
+				$result .= $this->startMainDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+			}
 		}
-		// Plain only with attached files
-		else if ($this->messageType['plain'] && $this->messageType['attached'] && (!$this->messageType['html'] && !$this->messageType['embedded']))
+		// Plain + HTML
+		else if ($this->messageType['plain'] && $this->messageType['html'])
 		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/related');
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startLevel(0, 'multipart/mixed');
+			}
+			// No files
+			else
+			{
+				$result .= $this->startMainDataPartHeader('utf-8', 'multipart/alternative', $this->defaultBodyEncoding);
+			}
 		}
-		// Plain only with embedded and attached files
-		else if ($this->messageType['plain'] && $this->messageType['embedded'] && $this->messageType['attached'] && (!$this->messageType['html']))
-		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
-		}
-
-		// HTML only
-		else if ($this->messageType['html'] && (!$this->messageType['plain'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
-		{
-			$result .= $this->startMainDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-		}
-		// HTML only with embedded files
-		else if ($this->messageType['html'] && $this->messageType['embedded'] && (!$this->messageType['plain'] && !$this->messageType['attached']))
-		{
-			$result .= $this->startLevel(0, 'multipart/related');
-		}
-		// HTML only with attached files
-		else if ($this->messageType['html'] && $this->messageType['attached'] && (!$this->messageType['plain'] && !$this->messageType['embedded']))
-		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
-		}
-		// HTML only with embedded and attached files
-		else if ($this->messageType['html'] && $this->messageType['embedded'] && $this->messageType['attached'] && (!$this->messageType['plain']))
-		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
-		}
-
-		// Plain and HTML
-		else if ($this->messageType['plain'] && $this->messageType['html'] && (!$this->messageType['embedded'] && !$this->messageType['attached']))
-		{
-			$result .= $this->startLevel(0, 'multipart/alternative');
-		}
-		// Plain and HTML with embedded files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['embedded'] && (!$this->messageType['attached']))
-		{
-			$result .= $this->startLevel(0, 'multipart/related');
-		}
-		// Plain and HTML with attached files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['attached'] && (!$this->messageType['embedded']))
-		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
-		}
-		// Plain and HTML with embedded and attached files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['embedded'] && $this->messageType['attached'])
-		{
-			$result .= $this->startLevel(0, 'multipart/mixed');
-		}
-
+		
 		$this->composed['headers'] = $result;		
 		
 		return $result;
@@ -433,198 +431,221 @@ class XXX_Email_Composer
 
 		$result = '';
 
-		// Plain only
-		if ($this->messageType['plain'] && (!$this->messageType['html'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
+		// Plain (no HTML)
+		if ($this->messageType['plain'] && !$this->messageType['html'])
 		{
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeEmbeddedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startLevel(1, 'multipart/related');
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeEmbeddedFiles(1);
+	
+				$result .= $this->endBoundary(1);
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// No files
+			else
+			{
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+			}
 		}
-		// Plain only with embedded files
-		else if ($this->messageType['plain'] && $this->messageType['embedded'] && (!$this->messageType['html'] && !$this->messageType['attached']))
+		// HTML (no plain)
+		else if ($this->messageType['html'] && !$this->messageType['plain'])
 		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeEmbeddedFiles(0);
-
-			$result .= $this->endBoundary(0);
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeEmbeddedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startLevel(1, 'multipart/related');
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->composeEmbeddedFiles(1);
+	
+				$result .= $this->endBoundary(1);
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// No files
+			else
+			{
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+			}
 		}
-		// Plain only with attached files
-		else if ($this->messageType['plain'] && $this->messageType['attached'] && (!$this->messageType['html'] && !$this->messageType['embedded']))
+		// Plain + HTML
+		else if ($this->messageType['plain'] && $this->messageType['html'])
 		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
+			// Embedded (no attached)
+			if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startLevel(1, 'multipart/alternative');
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->endBoundary(1);
+	
+				$result .= $this->composeEmbeddedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Attached (no embedded)
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startLevel(1, 'multipart/alternative');
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->endBoundary(1);
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// Embedded + Attached
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startLevel(1, 'multipart/related');
+	
+				$result .= $this->startBoundary(1);
+				$result .= $this->startLevel(2, 'multipart/alternative');
+	
+				$result .= $this->startBoundary(2);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->startBoundary(2);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->endBoundary(2);
+	
+				$result .= $this->composeEmbeddedFiles(1);
+	
+				$result .= $this->endBoundary(1);
+	
+				$result .= $this->composeAttachedFiles(0);
+	
+				$result .= $this->endBoundary(0);
+			}
+			// No files
+			else
+			{
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->startBoundary(0);
+				$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+				$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
+				$result .= self::$lineSeparator . self::$lineSeparator;
+	
+				$result .= $this->endBoundary(0);
+			}
 		}
-		// Plain only with embedded and attached files
-		else if ($this->messageType['plain'] && $this->messageType['embedded'] && $this->messageType['attached'] && (!$this->messageType['html']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startLevel(1, 'multipart/related');
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeEmbeddedFiles(1);
-
-			$result .= $this->endBoundary(1);
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-
-		// HTML only
-		else if ($this->messageType['html'] && (!$this->messageType['plain'] && !$this->messageType['embedded'] && !$this->messageType['attached']))
-		{
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-		}
-		// HTML only with embedded files
-		else if ($this->messageType['html'] && $this->messageType['embedded'] && (!$this->messageType['plain'] && !$this->messageType['attached']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeEmbeddedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-		// HTML only with attached files
-		else if ($this->messageType['html'] && $this->messageType['attached'] && (!$this->messageType['plain'] && !$this->messageType['embedded']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-		// HTML only with embedded and attached files
-		else if ($this->messageType['html'] && $this->messageType['embedded'] && $this->messageType['attached'] && (!$this->messageType['plain']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startLevel(1, 'multipart/related');
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->composeEmbeddedFiles(1);
-
-			$result .= $this->endBoundary(1);
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-
-		// Plain and HTML
-		else if ($this->messageType['plain'] && $this->messageType['html'] && (!$this->messageType['embedded'] && !$this->messageType['attached']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->startBoundary(0);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->endBoundary(0);
-		}
-		// Plain and HTML with embedded files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['embedded'] && (!$this->messageType['attached']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startLevel(1, 'multipart/alternative');
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->endBoundary(1);
-
-			$result .= $this->composeEmbeddedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-		// Plain and HTML with attached files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['attached'] && (!$this->messageType['embedded']))
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startLevel(1, 'multipart/alternative');
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->endBoundary(1);
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-		// Plain and HTML with embedded and attached files
-		else if ($this->messageType['plain'] && $this->messageType['html'] && $this->messageType['embedded'] && $this->messageType['attached'])
-		{
-			$result .= $this->startBoundary(0);
-			$result .= $this->startLevel(1, 'multipart/related');
-
-			$result .= $this->startBoundary(1);
-			$result .= $this->startLevel(2, 'multipart/alternative');
-
-			$result .= $this->startBoundary(2);
-			$result .= $this->startDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['plain'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->startBoundary(2);
-			$result .= $this->startDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			$result .= XXX_Email_Encoding_Body::encode($this->bodies['html'], $this->defaultBodyEncoding);
-			$result .= self::$lineSeparator . self::$lineSeparator;
-
-			$result .= $this->endBoundary(2);
-
-			$result .= $this->composeEmbeddedFiles(1);
-
-			$result .= $this->endBoundary(1);
-
-			$result .= $this->composeAttachedFiles(0);
-
-			$result .= $this->endBoundary(0);
-		}
-
+		
 		$this->composed['body'] = $result;
 
 		return $result;
 	}
 
+	public function composeReceivers ()
+	{
+		$result = XXX_Array::joinValuesToString($this->composeAddresses($this->receivers), ',');
+
+		$result = XXX_Email_Encoding_Header::encodeHeader('To', XXX_String::removeLineSeparators(XXX_String::normalizeLineSeparators($result)), $this->defaultHeaderEncoding);
+
+		$result = XXX_String::getPart($result, 3, XXX_String::getCharacterLength($result));
+
+		$this->composed['receivers'] = $result;
+
+		return $result;
+	}
+	
 	public function composeSubject ()
 	{
 		$result = $this->subject;
@@ -666,11 +687,17 @@ class XXX_Email_Composer
 		return $result;
 	}
 
-	public function compose ()
+	public function compose ($force = false)
 	{
-		$this->composeSubject();
-		$this->composeHeaders();
-		$this->composeBody();
+		if (!$this->isComposed || $force)
+		{
+			$this->composeReceivers();
+			$this->composeSubject();
+			$this->composeHeaders();
+			$this->composeBody();
+			
+			$this->isComposed = true;
+		}
 	}
 	
 	////////////////////
@@ -778,6 +805,21 @@ class XXX_Email_Composer
 	{
 		return XXX_Email_Sender::sendEmail($this);
 	}
+	
+	public function getEmailAsFileContent ()
+	{
+		$this->compose();
+		
+		$content = '';
+		//$content .= 'To:' . $this->composed['receivers'] . self::$lineSeparator;
+		$content .= 'Subject:' . $this->composed['subject'] . self::$lineSeparator;
+		$content .= $this->composed['headers'] . self::$lineSeparator;
+		$content .= $this->composed['body'];
+		
+		return $content;
+	}
+	
+	
 }
 
 ?>
