@@ -778,6 +778,19 @@ class XXX_Email_Composer
 	{
 		return XXX_Email_Sender::sendEmail($this);
 	}
+	
+	public function getEmailAsFileContent ()
+	{
+		$this->compose();
+		
+		$content = '';
+		//$content .= 'To:' . $this->composed['receivers'] . self::$lineSeparator;
+		$content .= 'Subject:' . $this->composed['subject'] . self::$lineSeparator;
+		$content .= $this->composed['headers'] . self::$lineSeparator;
+		$content .= $this->composed['body'];
+		
+		return $content;
+	}
 }
 
 ?>
