@@ -63,6 +63,7 @@ class XXX_Email_Composer
 	protected $organization = 'Organization';
 	
 	protected $sender = 'service@example.com';
+	protected $systemSender = 'service@example.com';
 	
 	protected $errorReceiver = 'error@example.com';
 	protected $replyReceiver = 'reply@example.com';
@@ -285,6 +286,7 @@ class XXX_Email_Composer
 		$this->determineMessageType();
 
 		$this->composed['sender'] = $this->composeAddress($this->sender);
+		$this->composed['systemSender'] = $this->composeAddress($this->systemSender);
 		
 		// Avoid spaces with the comma
 		$this->composed['receivers'] = XXX_Array::joinValuesToString($this->composeAddresses($this->receivers), ',');
@@ -302,7 +304,7 @@ class XXX_Email_Composer
 		// Human readable from
 		$result .= 'From: ' . $this->composed['sender'] . self::$lineSeparator;
 		// Sending service
-		$result .= 'Sender: ' . $this->composed['sender'] . self::$lineSeparator;
+		$result .= 'Sender: ' . $this->composed['systemSender'] . self::$lineSeparator;
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
 		$result .= 'Organization: ' . $this->organization . self::$lineSeparator;
@@ -350,17 +352,17 @@ class XXX_Email_Composer
 			{
 				$result .= $this->startMainDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
 			}
-			// Plain only with embedded files
+			// With embedded files
 			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/related');
 			}
-			// Plain only with attached files
+			// With attached files
 			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
 			}
-			// Plain only with embedded and attached files
+			// With embedded and attached files
 			else if ($this->messageType['embedded'] && $this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
@@ -374,17 +376,17 @@ class XXX_Email_Composer
 			{
 				$result .= $this->startMainDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
 			}
-			// HTML only with embedded files
+			// With embedded files
 			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/related');
 			}
-			// HTML only with attached files
+			// With attached files
 			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
 			}
-			// HTML only with embedded and attached files
+			// With embedded and attached files
 			else if ($this->messageType['embedded'] && $this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
@@ -398,17 +400,17 @@ class XXX_Email_Composer
 			{
 				$result .= $this->startLevel(0, 'multipart/alternative');
 			}
-			// Plain and HTML with embedded files
+			// With embedded files
 			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/related');
 			}
-			// Plain and HTML with attached files
+			// With attached files
 			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
 			}
-			// Plain and HTML with embedded and attached files
+			// With embedded and attached files
 			else if ($this->messageType['embedded'] && $this->messageType['attached'])
 			{
 				$result .= $this->startLevel(0, 'multipart/mixed');
@@ -715,6 +717,20 @@ class XXX_Email_Composer
 		}
 		
 		$this->sender = $sender;
+	}
+	
+	public function setSystemSender ($address, $name = '')
+	{
+		if ($name != '')
+		{
+			$systemSender = array('address' => $address, 'name' => $name);
+		}
+		else
+		{
+			$systemSender = $address;
+		}
+		
+		$this->systemSender = $systemSender;
 	}
 	
 	public function setErrorReceiver ($address, $name = '')
