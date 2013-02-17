@@ -818,8 +818,6 @@ class XXX_Email_Composer
 		
 		return $content;
 	}
-	
-	
 }
 
 ?>
