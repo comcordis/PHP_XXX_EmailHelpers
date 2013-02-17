@@ -673,7 +673,6 @@ class XXX_Email_Composer
 	{
 		if (!$this->isComposed || $force)
 		{
-			$this->composeReceivers();
 			$this->composeSubject();
 			$this->composeHeaders();
 			$this->composeBody();
