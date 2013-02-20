@@ -62,6 +62,7 @@ class XXX_Email_Composer
 	
 	protected $organization = 'Organization';
 	
+	// $systemSender on behalf of $sender
 	protected $sender = 'service@example.com';
 	protected $systemSender = 'service@example.com';
 	
@@ -303,8 +304,12 @@ class XXX_Email_Composer
 		$result .= 'Message-ID: <' . $this->messageID . '>' . self::$lineSeparator;
 		// Human readable from
 		$result .= 'From: ' . $this->composed['sender'] . self::$lineSeparator;
-		// Sending service
-		$result .= 'Sender: ' . $this->composed['systemSender'] . self::$lineSeparator;
+		
+		if ($this->composed['sender'] != $this->composed['systemSender'])
+		{
+			// Sending service
+			$result .= 'Sender: ' . $this->composed['systemSender'] . self::$lineSeparator;
+		}
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
 		$result .= 'Organization: ' . $this->organization . self::$lineSeparator;
