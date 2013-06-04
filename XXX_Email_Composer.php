@@ -60,14 +60,16 @@ class XXX_Email_Composer
 
 	protected $priority = 'normal';
 	
-	protected $organization = 'Organization';
+	protected $organisation = '';
+	
+	protected $defaultDomain = '';
 	
 	// $systemSender on behalf of $sender
-	protected $sender = 'service@example.com';
-	protected $systemSender = 'service@example.com';
+	protected $sender = '';
+	protected $systemSender = '';
 	
-	protected $errorReceiver = 'error@example.com';
-	protected $replyReceiver = 'reply@example.com';
+	protected $errorReceiver = '';
+	protected $replyReceiver = '';
 
 	/*
 		'john.doe@domain.com'
@@ -84,6 +86,17 @@ class XXX_Email_Composer
 		
 		$this->createMessageID();
 		$this->createBoundaries();
+		
+		$this->resetOrganisation();
+		$this->resetDefaultDomain();
+		$this->resetSender();
+		$this->resetSystemSender();
+		$this->resetErrorReceiver();
+		$this->resetReplyReceiver();
+		
+		$this->resetReceivers();
+		$this->resetCCReceivers();
+		$this->resetBCCReceivers();
 	}
 	
 	////////////////////
@@ -312,7 +325,7 @@ class XXX_Email_Composer
 		}
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
-		$result .= 'Organization: ' . $this->organization . self::$lineSeparator;
+		$result .= 'Organization: ' . $this->organisation . self::$lineSeparator;
 		
 		$result .= 'Errors-To: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
 		$result .= 'Return-Path: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
@@ -705,65 +718,101 @@ class XXX_Email_Composer
 		);
 	}
 	
-	public function setOrganization ($organization)
+	public function setOrganisation ($organisation)
 	{
-		$this->organization = $organization;
+		$this->organisation = $organisation;
 	}
-
-	public function setSender ($address, $name = '')
+	
+	public function resetOrganisation ()
 	{
-		if ($name != '')
+		$this->organisation = 'Organisation';
+	}
+	
+	public function setDefaultDomain ($defaultDomain)
+	{
+		$this->defaultDomain = $defaultDomain;
+	}
+	
+	public function resetDefaultDomain ()
+	{
+		$this->defaultDomain = 'example.com';
+	}
+	
+	public function normalizeAddressParameters ($address, $name = '')
+	{
+		$result = array();
+		
+		if (XXX_Type::isArray($address))
 		{
-			$sender = array('address' => $address, 'name' => $name);
+			if ($address['address'] != '')
+			{
+				$result['address'] = $address['address'];
+			}
+			if ($address['emailAddress'] != '')
+			{
+				$result['address'] = $address['emailAddress'];
+			}
+			if ($address['name'] != '')
+			{
+				$result['name'] = $address['name'];
+			}
 		}
 		else
 		{
-			$sender = $address;
+			$result['address'] = $address;
 		}
 		
-		$this->sender = $sender;
+		if ($name != '')
+		{
+			$result['name'] = $name;
+		}
+		
+		if ($result['name'] == '')
+		{
+			$result = $result['address'];
+		}
+		
+		return $result;
+	}
+	
+	public function setSender ($address, $name = '')
+	{
+		$this->sender = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetSender ()
+	{
+		$this->sender = 'service@' . $this->defaultDomain;
 	}
 	
 	public function setSystemSender ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$systemSender = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$systemSender = $address;
-		}
-		
-		$this->systemSender = $systemSender;
+		$this->systemSender = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetSystemSender ()
+	{
+		$this->systemSender = 'service@' . $this->defaultDomain;
 	}
 	
 	public function setErrorReceiver ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$errorReceiver = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$errorReceiver = $address;
-		}
-		
-		$this->errorReceiver = $errorReceiver;
+		$this->errorReceiver = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetErrorReceiver ()
+	{
+		$this->errorReceiver = 'error@' . $this->defaultDomain;
 	}
 	
 	public function setReplyReceiver ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$replyReceiver = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$replyReceiver = $address;
-		}
-		
-		$this->replyReceiver = $replyReceiver;
+		$this->replyReceiver = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetReplyReceiver ()
+	{
+		$this->replyReceiver = 'reply@' . $this->defaultDomain;
 	}
 	
 	public function setReceiver ($address, $name = '')
@@ -773,16 +822,22 @@ class XXX_Email_Composer
 	
 	public function addReceiver ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$receiver = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$receiver = $address;
-		}
-		
-		$this->receivers[] = $receiver;
+		$this->receivers[] = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetReceivers ()
+	{
+		$this->receivers = array();
+	}
+	
+	public function resetReceiver ()
+	{
+		return $this->resetReceivers();
+	}
+	
+	public function getReceivers ()
+	{
+		return $this->receivers;
 	}
 	
 	public function setCCReceiver ($address, $name = '')
@@ -792,16 +847,22 @@ class XXX_Email_Composer
 	
 	public function addCCReceiver ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$receiver = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$receiver = $address;
-		}
-		
-		$this->ccReceivers[] = $receiver;
+		$this->ccReceivers[] = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetCCReceivers ()
+	{
+		$this->ccReceivers = array();
+	}
+	
+	public function resetCCReceiver ()
+	{
+		return $this->resetCCReceivers();
+	}
+	
+	public function getCCReceivers ()
+	{
+		return $this->ccReceivers;
 	}
 	
 	public function setBCCReceiver ($address, $name = '')
@@ -811,32 +872,97 @@ class XXX_Email_Composer
 	
 	public function addBCCReceiver ($address, $name = '')
 	{
-		if ($name != '')
-		{
-			$receiver = array('address' => $address, 'name' => $name);
-		}
-		else
-		{
-			$receiver = $address;
-		}
-		
-		$this->bccReceivers[] = $receiver;
+		$this->bccReceivers[] = $this->normalizeAddressParameters($address, $name);
+	}
+	
+	public function resetBCCReceivers ()
+	{
+		$this->bccReceivers = array();
+	}
+	
+	public function resetBCCReceiver ()
+	{
+		return $this->resetBCCReceivers();
+	}
+	
+	public function getBCCReceivers ()
+	{
+		return $this->bccReceivers;
 	}
 
 	public function setBody ($data, $type = 'html')
 	{
 		$this->bodies[$type] = $data;
 	}
+	
+	public function prependBody ($data, $type = 'html')
+	{
+		$this->bodies[$type] = $data . $this->bodies[$type];
+	}
+	
+	public function appendBody ($data, $type = 'html')
+	{
+		$this->bodies[$type] = $this->bodies[$type] . $data;
+	}
+	
+	public function getBody ($type = 'html')
+	{
+		return $this->bodies[$type];
+	}
 
 	public function setSubject ($subject)
 	{
 		$this->subject = $subject;
+	}
+	
+	public function prependSubject ($subject)
+	{
+		$this->subject = $subject . $this->subject;
+	}
+	
+	public function appendSubject ($subject)
+	{
+		$this->subject = $this->subject . $subject;
+	}
+	
+	public function getSubject ()
+	{
+		return $this->subject;
 	}
 
 	public function send ()
 	{
 		return XXX_Email_Sender::sendEmail($this);
 	}
+	
+	public function convertAddressesToSimpleString ($addresses)
+	{
+		$result = '';
+		
+		$i = 0;
+		
+		foreach ($addresses as $address)
+		{
+			if ($i > 0)
+			{
+				$result .= ', ';
+			}
+			
+			if (XXX_Type::isArray($address))
+			{
+				$result .= $address['name'] . ' - ' . $address['address'];
+			}
+			else
+			{
+				$result .= $address;
+			}
+			
+			++$i;
+		}
+		
+		return $result;
+	}
+	
 	
 	public function getEmailAsFileContent ()
 	{
