@@ -930,9 +930,9 @@ class XXX_Email_Composer
 		return $this->subject;
 	}
 
-	public function send ()
+	public function send ($save = true)
 	{
-		return XXX_Email_Sender::sendEmail($this);
+		return XXX_Email_Sender::sendEmail($this, $save);
 	}
 	
 	public function convertAddressesToSimpleString ($addresses)
