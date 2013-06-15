@@ -14,11 +14,30 @@ abstract class XXX_Email_Sender
 		
 		if ($email)
 		{
-			if (XXX_String::hasPart(XXX_OperatingSystem::$hostname, '.'))
-			{
-				self::$systemSender['address'] = 'no-reply@' . XXX_OperatingSystem::$hostname;
-			}			
+			// System sender
+			
+				if (XXX_String::hasPart(XXX_OperatingSystem::$hostname, '.'))
+				{
+					self::$systemSender['address'] = 'no-reply@' . XXX_OperatingSystem::$hostname;
+				}
+				
+				$tempSender = $email->getSender();
+				
+				if (XXX_Type::isArray($tempSender))
+				{
+					$tempSender = $tempSender['address'];
+				}
+				
+				$tempSender = XXX_String::replace($tempSender, '@', '.');
+				
+				$domain = XXX_String::getLastSeparatedPart(self::$systemSender['address'], '@');
+				
+				self::$systemSender['name'] = $tempSender;			
+				self::$systemSender['address'] = $tempSender . '@' . $domain;			
+			
 			$email->setSystemSender(self::$systemSender);
+			
+			
 			
 			$email->compose();
 			

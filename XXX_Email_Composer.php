@@ -780,6 +780,11 @@ class XXX_Email_Composer
 		$this->sender = $this->normalizeAddressParameters($address, $name);
 	}
 	
+	public function getSender ()
+	{
+		return $this->sender;
+	}
+	
 	public function resetSender ()
 	{
 		$this->sender = 'service@' . $this->defaultDomain;
