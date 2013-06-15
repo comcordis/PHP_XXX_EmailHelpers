@@ -6,14 +6,9 @@ abstract class XXX_Email_Encoding_Header
 	{
 		$headerData = XXX_String::removeLineSeparators(XXX_String::normalizeLineSeparators($headerData));
 
-		$encoded = $headerData;
-
-		if (XXX_PHP::hasExtension('mb'))
-		{
-			$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_String::$lineSeparator);
-		}
-
-		if (!$encoded)
+		$result = false;
+		
+		if (!$result)
 		{
 			if (XXX_PHP::hasExtension('iconv'))
 			{
@@ -27,33 +22,64 @@ abstract class XXX_Email_Encoding_Header
 					'scheme' => $encoding
 				);
 
-				$encoded = iconv_mime_encode($header, $encoded, $preferences);
+				$encoded = iconv_mime_encode($header, $headerData, $preferences);
+				
+				if ($encoded)
+				{
+					$result = $encoded;
+				}
+			}
+		}
+		
+		if (!$result)
+		{
+			if (XXX_PHP::hasExtension('mb'))
+			{
+				$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_String::$lineSeparator);
+				
+				if ($encoded)
+				{
+					$result = $encoded;
+				}
 			}
 		}
 
-		return $encoded;
+		return $result;
 	}
 
 	public static function decodeHeader ($headerData, $encoding = 'B')
 	{
 		$headerData = XXX_String::removeLineSeparators(XXX_String::normalizeLineSeparators($headerData));
 
-		$decoded = $headerData;
+		$result = false;
 
-		if (XXX_PHP::hasExtension('mb'))
+		if (!$result)
 		{
-			$decoded = mb_decode_mimeheader($headerData);
-		}
-
-		if (!$decoded)
-		{
-			if (XXX_PHP::hasExtension('iconv'))
+			if (XXX_PHP::hasExtension('mb'))
 			{
-				$decoded = iconv_mime_decode($decoded, 2, 'UTF-8');
+				$decoded = mb_decode_mimeheader($headerData);
+				
+				if ($decoded)
+				{
+					$result = $decoded;
+				}
 			}
 		}
 
-		return $decoded;
+		if (!$result)
+		{
+			if (XXX_PHP::hasExtension('iconv'))
+			{
+				$decoded = iconv_mime_decode($headerData, 2, 'UTF-8');
+				
+				if ($decoded)
+				{
+					$result = $decoded;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	/*
