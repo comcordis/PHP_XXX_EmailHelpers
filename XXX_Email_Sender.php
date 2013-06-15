@@ -56,8 +56,6 @@ abstract class XXX_Email_Sender
 				
 				$timestampPartsForPath = XXX_TimestampHelpers::getTimestampPartsForPath();
 				
-				XXX_Type::peakAtVariable($timestampPartsForPath);
-				
 				$file = 'email_' . XXX_TimestampHelpers::getTimestampPartForFile() . '_' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 8) . '.eml';
 				
 				$emailFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'sent', $timestampPartsForPath['year'], $timestampPartsForPath['month'], $timestampPartsForPath['date'], $file));
