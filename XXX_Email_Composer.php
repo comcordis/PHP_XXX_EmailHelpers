@@ -15,6 +15,7 @@ class XXX_Email_Composer
 {
 	protected $messageID;
 	
+	// Should remain "\n" because some unix/linux mailer convert \r\n to \n\n and thus making the headers have an extra empty line triggering body to start
 	public static $lineSeparator = "\n";
 
 	protected $boundaries = array

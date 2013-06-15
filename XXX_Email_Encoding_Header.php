@@ -10,6 +10,19 @@ abstract class XXX_Email_Encoding_Header
 		
 		if (!$result)
 		{
+			if (XXX_PHP::hasExtension('mb'))
+			{
+				$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_Email_Composer::$lineSeparator);
+				
+				if ($encoded)
+				{
+					$result = $encoded;
+				}
+			}
+		}
+		
+		if (!$result)
+		{
 			if (XXX_PHP::hasExtension('iconv'))
 			{
 				$preferences = array
@@ -23,19 +36,6 @@ abstract class XXX_Email_Encoding_Header
 				);
 
 				$encoded = iconv_mime_encode($header, $headerData, $preferences);
-				
-				if ($encoded)
-				{
-					$result = $encoded;
-				}
-			}
-		}
-		
-		if (!$result)
-		{
-			if (XXX_PHP::hasExtension('mb'))
-			{
-				$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_Email_Composer::$lineSeparator);
 				
 				if ($encoded)
 				{
