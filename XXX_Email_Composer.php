@@ -15,7 +15,7 @@ class XXX_Email_Composer
 {
 	protected $messageID;
 	
-	public static $lineSeparator = "\r\n";
+	public static $lineSeparator = "\n";
 
 	protected $boundaries = array
 	(

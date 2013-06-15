@@ -18,7 +18,7 @@ abstract class XXX_Email_Encoding_Header
 					'internal-charset' => 'UTF-8',
 					'output-charset' => 'UTF-8',
 					'line-length' => 74,
-					'line-break-chars' => XXX_String::$lineSeparator,
+					'line-break-chars' => XXX_Email_Composer::$lineSeparator,
 					'scheme' => $encoding
 				);
 
@@ -35,7 +35,7 @@ abstract class XXX_Email_Encoding_Header
 		{
 			if (XXX_PHP::hasExtension('mb'))
 			{
-				$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_String::$lineSeparator);
+				$encoded = mb_encode_mimeheader($header . ': ' . $headerData, 'UTF-8', $encoding, XXX_Email_Composer::$lineSeparator);
 				
 				if ($encoded)
 				{

@@ -156,7 +156,7 @@ abstract class XXX_Email_Encoding_Body
 		47 v
 		48 w
 		49 x
-		50 yXXX_Email_Composer::$lineSeparator
+		50 y
 		51 z
 		52 0
 		53 1
