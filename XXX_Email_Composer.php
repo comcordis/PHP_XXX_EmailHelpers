@@ -65,7 +65,7 @@ class XXX_Email_Composer
 	
 	protected $defaultDomain = '';
 	
-	protected $overwrittenTimestamp = false;
+	public $overwrittenTimestamp = false;
 	
 	// $systemSender on behalf of $sender
 	protected $sender = '';
