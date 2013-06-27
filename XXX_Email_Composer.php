@@ -65,6 +65,8 @@ class XXX_Email_Composer
 	
 	protected $defaultDomain = '';
 	
+	protected $overwrittenTimestamp = false;
+	
 	// $systemSender on behalf of $sender
 	protected $sender = '';
 	protected $systemSender = '';
@@ -312,8 +314,15 @@ class XXX_Email_Composer
 		$this->composed['replyReceiver'] = $this->composeAddress($this->replyReceiver);
 		
 		$result = '';
-
-		$result .= 'Date: ' . XXX_I18n_Formatter::formatRFC2822() . self::$lineSeparator;
+		
+		$timestamp = XXX_TimestampHelpers::getCurrentTimestamp();
+		
+		if ($this->overwrittenTimestamp > 0)
+		{
+			$timestamp = $this->overwrittenTimestamp;
+		}
+		
+		$result .= 'Date: ' . XXX_I18n_Formatter::formatRFC2822($timestamp) . self::$lineSeparator;
 
 		$result .= 'Message-ID: <' . $this->messageID . '>' . self::$lineSeparator;
 		// Human readable from
