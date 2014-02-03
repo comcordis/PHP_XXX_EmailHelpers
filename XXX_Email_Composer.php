@@ -16,7 +16,7 @@ class XXX_Email_Composer
 	protected $messageID;
 	
 	// Should remain "\n" because some unix/linux mailer convert \r\n to \n\n and thus making the headers have an extra empty line triggering body to start
-	public static $lineSeparator = "\n";
+	public static $lineSeparator = "\r\n";
 
 	protected $boundaries = array
 	(
@@ -269,7 +269,7 @@ class XXX_Email_Composer
 		for ($i = 0, $embeddedFilesTotal = XXX_Array::getFirstLevelItemTotal($this->files['embedded']); $i < $embeddedFilesTotal; ++$i)
 		{
 			$result .= $this->startBoundary($boundaryID);
-
+			
 			$result .= $this->startEmbeddedFilePartHeader($this->files['embedded'][$i]['file'], $this->files['embedded'][$i]['contentID'], $this->files['embedded'][$i]['mimeType'], $this->files['embedded'][$i]['encoding']);
 
 			$result .= XXX_Email_Encoding_Body::encode($this->files['embedded'][$i]['data'], $this->files['embedded'][$i]['encoding']);
@@ -977,8 +977,7 @@ class XXX_Email_Composer
 		
 		return $result;
 	}
-	
-	
+		
 	public function getEmailAsFileContent ()
 	{
 		$this->compose();

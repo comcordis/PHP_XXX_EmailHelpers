@@ -68,6 +68,30 @@ abstract class XXX_Email_Sender
 		
 		return $result;
 	}
+	
+	public static function sendSimpleEmail ($receiver = '', $subject = '', $body = '')
+	{
+		$email = new XXX_Email_Composer();
+
+		$email->setSender(self::$systemSender['address'], self::$systemSender['name']);
+		
+		if (XXX_Type::isArray($receiver))
+		{
+			foreach ($receiver as $tempReceiver)
+			{
+				$email->addReceiver($tempReceiver);
+			}
+		}
+		else
+		{
+			$email->addReceiver($receiver);
+		}
+		
+		$email->setSubject($subject);
+		$email->setBody($body, 'html');
+		
+		$email->send();
+	}
 }
 
 ?>
