@@ -44,7 +44,31 @@ abstract class XXX_Email_Sender
 			// Fake sendmail doesn't work in this situation
 			if (XXX::$deploymentInformation['localDevelopmentBox'] && XXX_PHP::$executionEnvironment == 'commandLine' && XXX_OperatingSystem::$platformName == 'windows')
 			{
-				ini_set('SMTP', 'smtp.ziggo.nl');
+				$host = gethostbyaddr(XXX_HTTPServer::$ipAddress);
+				$smtpServer = 'smtp.ziggo.nl';
+				
+				if (XXX_String::hasPart($host, 'ziggo'))
+				{
+					$smtpServer = 'smtp.ziggo.nl';
+				}
+				else if (XXX_String::hasPart($host, 'telfort'))
+				{
+					$smtpServer = 'smtp.telfort.nl';
+				}
+				else if (XXX_String::hasPart($host, 'kpn'))
+				{
+					$smtpServer = 'smtp.kpn-officedsl.nl';
+				}
+				else if (XXX_String::hasPart($host, 'xs4all'))
+				{
+					$smtpServer = 'smtp.xs4all.nl';
+				}
+				else if (XXX_String::hasPart($host, 'uniserver'))
+				{
+					$smtpServer = 'mail.uniserver.nl';
+				}
+				
+				ini_set('SMTP', $smtpServer);
 				//ini_set('smtp_port', '25');
 				
 				ini_set('sendmail_from', self::$systemSender['address']);

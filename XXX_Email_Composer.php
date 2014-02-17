@@ -58,7 +58,6 @@ class XXX_Email_Composer
 	
 	public $isComposed = false;
 	
-
 	protected $priority = 'normal';
 	
 	protected $organisation = '';
@@ -87,7 +86,8 @@ class XXX_Email_Composer
 		self::$lineSeparator = XXX_OperatingSystem::$lineSeparator;
 		//self::$lineSeparator = "\n";
 		
-		$this->createMessageID();
+		$this->messageID = self::createMessageID();
+		
 		$this->createBoundaries();
 		
 		$this->resetOrganisation();
@@ -106,16 +106,40 @@ class XXX_Email_Composer
 	// Message ID & Date
 	////////////////////
 	
-	protected function createMessageID ()
+	public static function createMessageID ()
+	{
+		return self::createContentID();
+	}
+	
+	public static function createContentID ()
 	{
 		$uniqueHash = XXX_String::getRandomHash();
 		
-		$this->messageID = $uniqueHash . '@' . XXX_OperatingSystem::$hostname;
+		$hostname = XXX_OperatingSystem::$hostname;
+		
+		if (!XXX_String::hasPart($hostname, '.'))
+		{
+			$hostname = XXX_String::getLastSeparatedPart(XXX_Email_Sender::$systemSender['address'], '@');
+		}
+		
+		$result = 'ID' . XXX_String::getPart($uniqueHash, 0, 16) . '@' . $hostname;
+				
+		return $result;
+		
+		//XXX_String::getPart(XXX_String::getRandomHash(), 0, 16) . '@' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 16) . '.mail';
 	}
 	
 	////////////////////
 	// Part boundaries & headers
 	////////////////////
+
+	/*
+	
+	boundary := 0*69<bchars> bcharsnospace
+	bchars := bcharsnospace / " "
+	bcharsnospace := DIGIT / ALPHA / "'" / "(" / ")" / "+" / "_" / "," / "-" / "." / "/" / ":" / "=" / "?"
+	
+	*/
 
 	protected function createBoundaries ($total = 3)
 	{
@@ -215,7 +239,7 @@ class XXX_Email_Composer
 
 		return $result;
 	}
-
+	
 	////////////////////
 	// Files
 	////////////////////
