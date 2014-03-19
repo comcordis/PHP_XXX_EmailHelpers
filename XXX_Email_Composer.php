@@ -352,11 +352,11 @@ class XXX_Email_Composer
 		// Human readable from
 		$result .= 'From: ' . $this->composed['sender'] . self::$lineSeparator;
 		
-		if ($this->composed['sender'] != $this->composed['systemSender'])
-		{
+		//if ($this->composed['sender'] != $this->composed['systemSender'])
+		//{
 			// Sending service
 			$result .= 'Sender: ' . $this->composed['systemSender'] . self::$lineSeparator;
-		}
+		//}
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
 		$result .= 'Organization: ' . $this->organisation . self::$lineSeparator;
