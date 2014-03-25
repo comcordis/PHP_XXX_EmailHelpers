@@ -172,7 +172,7 @@ abstract class XXX_Email_Encoding_Body
 		63 /
 		*/
 		
-		public static function encodeBase64 ($bodyData = '', $maximumLineLength = 75)
+		public static function encodeBase64 ($bodyData = '', $maximumLineLength = 76)
 		{
 			//$encoded = XXX_String::normalizeLineSeparators($bodyData);
 			
@@ -257,7 +257,7 @@ abstract class XXX_Email_Encoding_Body
 			return quoted_printable_encode($bodyData);	
 		}
 		
-		public static function encodeQuotedPrintableStateMachine ($bodyData = '', $maximumLineLength = 75, $ebcdicReliable = true)
+		public static function encodeQuotedPrintableStateMachine ($bodyData = '', $maximumLineLength = 76, $ebcdicReliable = true)
 		{
 			$encoded = XXX_String::normalizeLineSeparators($bodyData);
 			
