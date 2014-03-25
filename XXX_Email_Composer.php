@@ -83,7 +83,7 @@ class XXX_Email_Composer
 
 	public function __construct ()
 	{
-		self::$lineSeparator = XXX_OperatingSystem::$lineSeparator;
+		//self::$lineSeparator = XXX_OperatingSystem::$lineSeparator;
 		//self::$lineSeparator = "\n";
 		
 		$this->messageID = self::createMessageID();
@@ -312,7 +312,7 @@ class XXX_Email_Composer
 		{
 			$result .= $this->startBoundary($boundaryID);
 
-			$result .= $this->startEmbeddedFilePartHeader($this->files['attached'][$i]['file'], $this->files['attached'][$i]['mimeType'], $this->files['attached'][$i]['encoding']);
+			$result .= $this->startAttachedFilePartHeader($this->files['attached'][$i]['file'], $this->files['attached'][$i]['mimeType'], $this->files['attached'][$i]['encoding']);
 
 			$result .= XXX_Email_Encoding_Body::encode($this->files['attached'][$i]['data'], $this->files['attached'][$i]['encoding']);
 
@@ -715,7 +715,7 @@ class XXX_Email_Composer
 		
 		if (XXX_Type::isArray($address))
 		{
-			$result = $address['name'] . '<' . $address['address'] . '>';
+			$result = $address['name'] . ' <' . $address['address'] . '>';
 		}
 		else
 		{

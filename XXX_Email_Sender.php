@@ -32,8 +32,8 @@ abstract class XXX_Email_Sender
 				
 				$domain = XXX_String::getLastSeparatedPart(self::$systemSender['address'], '@');
 				
-				self::$systemSender['name'] = $tempSender;			
-				self::$systemSender['address'] = $tempSender . '@' . $domain;			
+				self::$systemSender['name'] = $tempSender;
+				self::$systemSender['address'] = $tempSender . '@' . $domain;
 			
 			$email->setSystemSender(self::$systemSender);
 			
