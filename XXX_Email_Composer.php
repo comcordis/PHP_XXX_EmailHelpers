@@ -715,7 +715,7 @@ class XXX_Email_Composer
 		
 		if (XXX_Type::isArray($address))
 		{
-			if (XXX_String::hasValue($address['name'], ' '))
+			if (XXX_String::hasPart($address['name'], ' '))
 			{
 				$result .= '"' . $address['name'] . '"';
 			}
