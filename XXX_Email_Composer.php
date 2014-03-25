@@ -715,11 +715,20 @@ class XXX_Email_Composer
 		
 		if (XXX_Type::isArray($address))
 		{
-			$result = $address['name'] . ' <' . $address['address'] . '>';
+			if (XXX_String::hasValue($address['name'], ' '))
+			{
+				$result .= '"' . $address['name'] . '"';
+			}
+			else
+			{
+				$result .= $address['name'];
+			}
+			
+			$result .= ' <' . $address['address'] . '>';
 		}
 		else
 		{
-			$result = $address;
+			$result = '<' . $address . '>';
 		}
 		
 		return $result;
