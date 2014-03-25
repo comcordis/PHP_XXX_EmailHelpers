@@ -362,7 +362,7 @@ class XXX_Email_Composer
 		$result .= 'Organization: ' . $this->organisation . self::$lineSeparator;
 		
 		$result .= 'Errors-To: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
-		$result .= 'Return-Path: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
+		//$result .= 'Return-Path: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
 		
 		$result .= 'Reply-To: ' . $this->composed['replyReceiver'] . self::$lineSeparator;
 		
