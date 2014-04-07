@@ -780,11 +780,11 @@ class XXX_Email_Composer
 		{
 			if ($address['address'] != '')
 			{
-				$result['address'] = $address['address'];
+				$result['address'] = XXX_String::convertToLowerCase($address['address']);
 			}
 			if ($address['emailAddress'] != '')
 			{
-				$result['address'] = $address['emailAddress'];
+				$result['address'] = XXX_String::convertToLowerCase($address['emailAddress']);
 			}
 			if ($address['name'] != '')
 			{
@@ -793,7 +793,7 @@ class XXX_Email_Composer
 		}
 		else
 		{
-			$result['address'] = $address;
+			$result['address'] = XXX_String::convertToLowerCase($address);
 		}
 		
 		if ($name != '')
@@ -1007,8 +1007,8 @@ class XXX_Email_Composer
 		$this->compose();
 		
 		$content = '';
-		$content .= 'To:' . $this->composed['receivers'] . self::$lineSeparator;
-		$content .= 'Subject:' . $this->composed['subject'] . self::$lineSeparator;
+		$content .= 'To: ' . $this->composed['receivers'] . self::$lineSeparator;
+		$content .= 'Subject: ' . $this->composed['subject'] . self::$lineSeparator;
 		$content .= $this->composed['headers'] . self::$lineSeparator;
 		$content .= $this->composed['body'];
 		
