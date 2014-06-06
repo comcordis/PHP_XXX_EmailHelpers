@@ -116,6 +116,16 @@ abstract class XXX_Email_Sender
 		
 		$email->send();
 	}
+	
+	public static function correctOwnerAndPermissions ()
+	{
+		$tempPath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails'));
+		
+		XXX_FileSystem_Local::setDirectoryOwnerAdvanced($tempPath, 'apache', 'apache', true, true);
+		
+		XXX_FileSystem_Local::setDirectoryPermissions($tempPath, '770', true);			
+		XXX_FileSystem_Local::setFilePermissionsInDirectory($tempPath, '660', true);
+	}
 }
 
 ?>
