@@ -93,7 +93,7 @@ abstract class XXX_Email_Sender
 		return $result;
 	}
 	
-	public static function sendSimpleEmail ($receiver = '', $subject = '', $body = '')
+	public static function sendSimpleEmail ($receiver = '', $subject = 'Testing', $body = 'This is a test')
 	{
 		$email = new XXX_Email_Composer();
 

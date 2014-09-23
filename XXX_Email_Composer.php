@@ -786,6 +786,10 @@ class XXX_Email_Composer
 			{
 				$result['address'] = XXX_String::convertToLowerCase($address['emailAddress']);
 			}
+			if ($address['email'] != '')
+			{
+				$result['address'] = XXX_String::convertToLowerCase($address['email']);
+			}
 			if ($address['name'] != '')
 			{
 				$result['name'] = $address['name'];
