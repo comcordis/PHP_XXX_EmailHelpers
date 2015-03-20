@@ -7,6 +7,8 @@ abstract class XXX_Email_Sender
 		'name' => 'Comcordis_Email_Sender',
 		'address' => 'no-reply@server.comcordis.com'
 	);
+
+	public static $tool = 'smtp';
 	
 	public static function sendEmail ($email, $save = true)
 	{
@@ -37,57 +39,102 @@ abstract class XXX_Email_Sender
 			
 			$email->setSystemSender(self::$systemSender);
 			
-			
-			
 			$email->compose();
-			
-			// Fake sendmail doesn't work in this situation
-			if (XXX::$deploymentInformation['localDevelopmentBox'] && XXX_PHP::$executionEnvironment == 'commandLine' && XXX_OperatingSystem::$platformName == 'windows')
+
+			switch (self::$tool)
 			{
-				$host = gethostbyaddr(XXX_HTTPServer::$ipAddress);
-				$smtpServer = 'smtp.ziggo.nl';
-				
-				if (XXX_String::hasPart($host, 'ziggo'))
-				{
-					$smtpServer = 'smtp.ziggo.nl';
-				}
-				else if (XXX_String::hasPart($host, 'telfort'))
-				{
-					$smtpServer = 'smtp.telfort.nl';
-				}
-				else if (XXX_String::hasPart($host, 'kpn'))
-				{
-					$smtpServer = 'smtp.kpn-officedsl.nl';
-				}
-				else if (XXX_String::hasPart($host, 'xs4all'))
-				{
-					$smtpServer = 'smtp.xs4all.nl';
-				}
-				else if (XXX_String::hasPart($host, 'uniserver'))
-				{
-					$smtpServer = 'mail.uniserver.nl';
-				}
-				
-				ini_set('SMTP', $smtpServer);
-				//ini_set('smtp_port', '25');
-				
-				ini_set('sendmail_from', self::$systemSender['address']);
+				case 'smtp':
+					
+					// Fake sendmail doesn't work in this situation
+					if (XXX::$deploymentInformation['localDevelopmentBox'] && XXX_PHP::$executionEnvironment == 'commandLine' && XXX_OperatingSystem::$platformName == 'windows')
+					{
+						$host = gethostbyaddr(XXX_HTTPServer::$ipAddress);
+						$smtpServer = 'smtp.ziggo.nl';
+						
+						if (XXX_String::hasPart($host, 'ziggo'))
+						{
+							$smtpServer = 'smtp.ziggo.nl';
+						}
+						else if (XXX_String::hasPart($host, 'telfort'))
+						{
+							$smtpServer = 'smtp.telfort.nl';
+						}
+						else if (XXX_String::hasPart($host, 'kpn'))
+						{
+							$smtpServer = 'smtp.kpn-officedsl.nl';
+						}
+						else if (XXX_String::hasPart($host, 'xs4all'))
+						{
+							$smtpServer = 'smtp.xs4all.nl';
+						}
+						else if (XXX_String::hasPart($host, 'uniserver'))
+						{
+							$smtpServer = 'mail.uniserver.nl';
+						}
+						
+						ini_set('SMTP', $smtpServer);
+						//ini_set('smtp_port', '25');
+						
+						ini_set('sendmail_from', self::$systemSender['address']);
+					}
+					
+					if ($save)
+					{
+						$emailAsFileContent = $email->getEmailAsFileContent();
+						
+						$timestampPartsForPath = XXX_TimestampHelpers::getTimestampPartsForPath();
+						
+						$file = 'email_' . XXX_TimestampHelpers::getTimestampPartForFile() . '_' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 8) . '.eml';
+						
+						$emailFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'sent', $timestampPartsForPath['year'], $timestampPartsForPath['month'], $timestampPartsForPath['date'], $file));
+						
+						XXX_FileSystem_Local::writeFileContent($emailFilePath, $emailAsFileContent);
+					}
+					
+					$result = mail($email->composed['receivers'], $email->composed['subject'], $email->composed['body'], $email->composed['headers']);
+					break;
+				case 'mailGunAPI':
+
+					$to = '';
+					if ($email->composed['receivers'] != '')
+					{
+						$to .= $email->composed['receivers'];
+					}
+					if ($email->composed['ccReceivers'] != '')
+					{
+						if ($to != '')
+						{
+							$to .= ',';
+						}
+						$to .= $email->composed['ccReceivers'];
+					}
+					if ($email->composed['bccReceivers'] != '')
+					{
+						if ($to != '')
+						{
+							$to .= ',';
+						}
+						$to .= $email->composed['bccReceivers'];
+					}
+
+					$message = '';
+					$message .= 'To: ' . $email->composed['receivers'] . XXX_Email_Composer::$lineSeparator;
+					$message .= 'Subject: ' . $email->composed['subject'] . XXX_Email_Composer::$lineSeparator;
+					$message .= $email->composed['headers'] . XXX_Email_Composer::$lineSeparator;
+					$message .= XXX_Email_Composer::$lineSeparator;
+					$message .= $email->composed['body'];
+					
+					$data = array
+					(
+						'to' => $to,
+						'message' => $message
+					);
+
+					XXX_MailGunAPI_SendEmailService::sendEmail('mg.yourairporttransfer.com', $data);
+
+
+					break;
 			}
-			
-			if ($save)
-			{
-				$emailAsFileContent = $email->getEmailAsFileContent();
-				
-				$timestampPartsForPath = XXX_TimestampHelpers::getTimestampPartsForPath();
-				
-				$file = 'email_' . XXX_TimestampHelpers::getTimestampPartForFile() . '_' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 8) . '.eml';
-				
-				$emailFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'sent', $timestampPartsForPath['year'], $timestampPartsForPath['month'], $timestampPartsForPath['date'], $file));
-				
-				XXX_FileSystem_Local::writeFileContent($emailFilePath, $emailAsFileContent);
-			}
-			
-			$result = mail($email->composed['receivers'], $email->composed['subject'], $email->composed['body'], $email->composed['headers']); 
 		}
 		
 		return $result;
