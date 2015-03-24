@@ -13,8 +13,6 @@ To fix this, you need to log in to your DNS settings, wherever they may be, and 
 */
 class XXX_Email_Composer
 {
-	protected $messageID;
-	
 	// Should remain "\n" because some unix/linux mailer convert \r\n to \n\n and thus making the headers have an extra empty line triggering body to start
 	public static $lineSeparator = "\r\n";
 
@@ -25,8 +23,8 @@ class XXX_Email_Composer
 
 	protected $bodies = array
 	(
-		'plain' => ' ',
-		'html' => ' '
+		'plain' => '',
+		'html' => ''
 	);
 
 	protected $files = array
@@ -35,7 +33,7 @@ class XXX_Email_Composer
 		'attached' => array()
 	);
 
-	protected $messageType = array
+	public $messageType = array
 	(
 		'plain' => false,
 		'html' => true,
@@ -45,7 +43,7 @@ class XXX_Email_Composer
 
 	protected $mimeWarning = 'This is a multi-part message in MIME format. If you see this message it means that your mail client doesn\'t support multi-part messages (Messages with different versions and parts of the message, like for example a plain text or rich HTML version, or attachments etc.';
 
-	protected $subject = '';
+	public $subject = '';
 
 	protected $defaultBodyEncoding = 'base64';
 	protected $defaultHeaderEncoding = 'B';
@@ -60,15 +58,15 @@ class XXX_Email_Composer
 	
 	protected $priority = 'normal';
 	
-	protected $organisation = '';
+	protected $organisation = 'Comcordis B.V.';
 	
-	protected $defaultDomain = '';
+	protected $customDomain = 'comcordis.com';
 	
 	public $overwrittenTimestamp = false;
 	
-	// $systemSender on behalf of $sender
+	// $relaySender on behalf of $sender
 	protected $sender = '';
-	protected $systemSender = '';
+	protected $relaySender = '';
 	
 	protected $errorReceiver = '';
 	protected $replyReceiver = '';
@@ -86,14 +84,12 @@ class XXX_Email_Composer
 		//self::$lineSeparator = XXX_OperatingSystem::$lineSeparator;
 		//self::$lineSeparator = "\n";
 		
-		$this->messageID = self::createMessageID();
-		
 		$this->createBoundaries();
 		
 		$this->resetOrganisation();
-		$this->resetDefaultDomain();
+		$this->resetCustomDomain();
 		$this->resetSender();
-		$this->resetSystemSender();
+		$this->resetRelaySender();
 		$this->resetErrorReceiver();
 		$this->resetReplyReceiver();
 		
@@ -103,26 +99,32 @@ class XXX_Email_Composer
 	}
 	
 	////////////////////
-	// Message ID & Date
+	// Content ID
 	////////////////////
-	
-	public static function createMessageID ()
-	{
-		return self::createContentID();
-	}
-	
-	public static function createContentID ()
+		
+	public function createContentID ($customDomain = '')
 	{
 		$uniqueHash = XXX_String::getRandomHash();
-		
-		$hostname = XXX_OperatingSystem::$hostname;
-		
-		if (!XXX_String::hasPart($hostname, '.'))
+
+		if ($customDomain == '')
 		{
-			$hostname = XXX_String::getLastSeparatedPart(XXX_Email_Sender::$systemSender['address'], '@');
+			if ($this->customDomain != '')
+			{
+				$customDomain = $this->customDomain;
+			}
+
+			if ($customDomain == '')
+			{
+				$customDomain = XXX_OperatingSystem::$hostname;
+			
+				if (!XXX_String::hasPart($customDomain, '.'))
+				{
+					$customDomain = XXX_String::getLastSeparatedPart(XXX_Email_Sender::$relaySender['address'], '@');
+				}
+			}
 		}
-		
-		$result = 'ID' . XXX_String::getPart($uniqueHash, 0, 16) . '@' . $hostname;
+
+		$result = 'ID' . XXX_String::getPart($uniqueHash, 0, 16) . '@' . $customDomain;
 				
 		return $result;
 		
@@ -324,10 +326,8 @@ class XXX_Email_Composer
 
 	public function composeHeaders ()
 	{
-		$this->determineMessageType();
-
 		$this->composed['sender'] = $this->composeAddress($this->sender);
-		$this->composed['systemSender'] = $this->composeAddress($this->systemSender);
+		$this->composed['relaySender'] = $this->composeAddress($this->relaySender);
 		
 		// Avoid spaces with the comma
 		$this->composed['receivers'] = XXX_Array::joinValuesToString($this->composeAddresses($this->receivers), ',');
@@ -337,8 +337,87 @@ class XXX_Email_Composer
 		$this->composed['errorReceiver'] = $this->composeAddress($this->errorReceiver);
 		$this->composed['replyReceiver'] = $this->composeAddress($this->replyReceiver);
 		
+		$this->determineMessageType();
+
+		// Plain only
+		if ($this->messageType['plain'] && !$this->messageType['html'])
+		{
+			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startMainDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
+			}
+			// With embedded files
+			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/related');
+			}
+			// With attached files
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+			// With embedded and attached files
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+		}
+
+		// HTML only
+		else if ($this->messageType['html'] && !$this->messageType['plain'])
+		{
+			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startMainDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
+			}
+			// With embedded files
+			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/related');
+			}
+			// With attached files
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+			// With embedded and attached files
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+		}
+
+		// Plain and HTML
+		else if ($this->messageType['plain'] && $this->messageType['html'])
+		{		
+			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/alternative');
+			}
+			// With embedded files
+			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/related');
+			}
+			// With attached files
+			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+			// With embedded and attached files
+			else if ($this->messageType['embedded'] && $this->messageType['attached'])
+			{
+				$this->composed['contentType'] = $this->startLevel(0, 'multipart/mixed');
+			}
+		}
+
+		$this->composed['contentType'] = XXX_String::removeTrailingLineSeparators($this->composed['contentType']);
+
 		$result = '';
-		
+
+		$result .= 'MIME-Version: 1.0' . self::$lineSeparator;
+		$result .= $this->composed['contentType'] . self::$lineSeparator;
+
 		$timestamp = XXX_TimestampHelpers::getCurrentTimestamp();
 		
 		if ($this->overwrittenTimestamp > 0)
@@ -348,23 +427,27 @@ class XXX_Email_Composer
 		
 		$result .= 'Date: ' . XXX_I18n_Formatter::formatRFC2822($timestamp) . self::$lineSeparator;
 
-		$result .= 'Message-ID: <' . $this->messageID . '>' . self::$lineSeparator;
+		//$result .= 'Message-ID: <' . $this->createContentID() . '>' . self::$lineSeparator;
+
 		// Human readable from
 		$result .= 'From: ' . $this->composed['sender'] . self::$lineSeparator;
 		
-		//if ($this->composed['sender'] != $this->composed['systemSender'])
-		//{
-			// Sending service
-			$result .= 'Sender: ' . $this->composed['systemSender'] . self::$lineSeparator;
-		//}
+		// Sending service
+		//$result .= 'Sender: ' . $this->composed['relaySender'] . self::$lineSeparator;
 		
 		// http://www.sitecrafting.com/blog/aol-denying-email/
 		$result .= 'Organization: ' . $this->organisation . self::$lineSeparator;
 		
-		$result .= 'Errors-To: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
+		if ($this->composed['errorReceiver'] != '')
+		{
+			$result .= 'Errors-To: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
+		}
 		//$result .= 'Return-Path: ' . $this->composed['errorReceiver'] . self::$lineSeparator;
 		
-		$result .= 'Reply-To: ' . $this->composed['replyReceiver'] . self::$lineSeparator;
+		if ($this->composed['replyReceiver'] != '')
+		{
+			$result .= 'Reply-To: ' . $this->composed['replyReceiver'] . self::$lineSeparator;
+		}
 		
 		if ($this->composed['ccReceivers'] != '')
 		{
@@ -376,99 +459,27 @@ class XXX_Email_Composer
 			$result .= 'Bcc: ' . $this->composed['bccReceivers'] . self::$lineSeparator;
 		}
 		
-		$result .= 'MIME-Version: 1.0' . self::$lineSeparator;
-
 		switch ($this->priority)
 		{
 			case 'high':
 				$result .= 'X-Priority: 1 (High)' . self::$lineSeparator;
 				$result .= 'X-MSMail-Priority: High' . self::$lineSeparator;
 				$result .= 'Importance: High' . self::$lineSeparator;
-			break;
-			case 'normal':
-				$result .= 'X-Priority: 3 (Normal)' . self::$lineSeparator;
-				$result .= 'X-MSMail-Priority: Normal' . self::$lineSeparator;
-				$result .= 'Importance: Normal' . self::$lineSeparator;
-			break;
+				break;
 			case 'low':
 				$result .= 'X-Priority: 5 (Low)' . self::$lineSeparator;
 				$result .= 'X-MSMail-Priority: Low' . self::$lineSeparator;
 				$result .= 'Importance: Low' . self::$lineSeparator;
-			break;
+				break;
+			case 'normal':
+				/*
+				$result .= 'X-Priority: 3 (Normal)' . self::$lineSeparator;
+				$result .= 'X-MSMail-Priority: Normal' . self::$lineSeparator;
+				$result .= 'Importance: Normal' . self::$lineSeparator;
+				*/
+				break;
 		}
-
-		// Plain only
-		if ($this->messageType['plain'] && !$this->messageType['html'])
-		{
-			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startMainDataPartHeader('utf-8', 'text/plain', $this->defaultBodyEncoding);
-			}
-			// With embedded files
-			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/related');
-			}
-			// With attached files
-			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-			// With embedded and attached files
-			else if ($this->messageType['embedded'] && $this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-		}
-
-		// HTML only
-		else if ($this->messageType['html'] && !$this->messageType['plain'])
-		{
-			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startMainDataPartHeader('utf-8', 'text/html', $this->defaultBodyEncoding);
-			}
-			// With embedded files
-			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/related');
-			}
-			// With attached files
-			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-			// With embedded and attached files
-			else if ($this->messageType['embedded'] && $this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-		}
-
-		// Plain and HTML
-		else if ($this->messageType['plain'] && $this->messageType['html'])
-		{		
-			if (!$this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/alternative');
-			}
-			// With embedded files
-			else if ($this->messageType['embedded'] && !$this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/related');
-			}
-			// With attached files
-			else if ($this->messageType['attached'] && !$this->messageType['embedded'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-			// With embedded and attached files
-			else if ($this->messageType['embedded'] && $this->messageType['attached'])
-			{
-				$result .= $this->startLevel(0, 'multipart/mixed');
-			}
-		}
-
+		
 		$this->composed['headers'] = $result;		
 		
 		return $result;
@@ -759,17 +770,22 @@ class XXX_Email_Composer
 	
 	public function resetOrganisation ()
 	{
-		$this->organisation = 'Organisation';
+		$this->organisation = 'Comcordis B.V.';
 	}
 	
-	public function setDefaultDomain ($defaultDomain)
+	public function setCustomDomain ($customDomain)
 	{
-		$this->defaultDomain = $defaultDomain;
+		$this->customDomain = $customDomain;
+
+		$this->resetSender();
+		$this->resetRelaySender();
+		$this->resetReplyReceiver();
+		$this->resetErrorReceiver();
 	}
 	
-	public function resetDefaultDomain ()
+	public function resetCustomDomain ()
 	{
-		$this->defaultDomain = 'example.com';
+		$this->setCustomDomain('comcordis.com');
 	}
 	
 	public function normalizeAddressParameters ($address, $name = '')
@@ -825,19 +841,95 @@ class XXX_Email_Composer
 	
 	public function resetSender ()
 	{
-		$this->sender = 'service@' . $this->defaultDomain;
+		$this->sender = 'service@' . $this->customDomain;
 	}
 	
-	public function setSystemSender ($address, $name = '')
+	public function setRelaySender ($address, $name = '')
 	{
-		$this->systemSender = $this->normalizeAddressParameters($address, $name);
+		$this->relaySender = $this->normalizeAddressParameters($address, $name);
 	}
 	
-	public function resetSystemSender ()
+	public function resetRelaySender ()
 	{
-		$this->systemSender = 'service@' . $this->defaultDomain;
+		$this->relaySender = 'service@' . $this->customDomain;
 	}
-	
+
+	public function correctRelaySenderForSMTP ()
+	{
+		$relaySender = array
+		(
+			'name' => 'Comcordis_Email',
+			'address' => 'no-reply@comcordis.com'
+		);
+
+		// Correct for the respective host
+		if (XXX_String::hasPart(XXX_OperatingSystem::$hostname, '.'))
+		{
+			$relaySender['address'] = 'no-reply@' . XXX_OperatingSystem::$hostname;
+		}
+
+		// Convert the original sender email address as if it were an email address under this host
+		$originalSender = $email->getSender();
+						
+		if (XXX_Type::isArray($originalSender))
+		{
+			$originalSenderAddress = $originalSender['address'];
+		}
+		else
+		{
+			$originalSenderAddress = $originalSender;
+		}
+		
+		$originalSenderAddress = XXX_String::replace($originalSenderAddress, '@', '.');
+		
+		$domain = XXX_String::getLastSeparatedPart($relaySender['address'], '@');
+		
+		$relaySender['name'] = $originalSenderAddress;
+		$relaySender['address'] = $originalSenderAddress . '@' . $domain;
+
+		$this->setRelaySender($relaySender);
+	}
+
+	public function addSubDomainToAddress ($address = '', $subDomain = '')
+	{
+		if (XXX_Type::isArray($address))
+		{
+			$address['address'] = XXX_String_Pattern::replace($address['address'], '@(?!' . $subDomain . '\\.)', '', '@' . $subDomain . '.');
+		}
+		else
+		{
+			$address = XXX_String_Pattern::replace($address, '@(?!' . $subDomain . '\\.)', '', '@' . $subDomain . '.');
+		}
+
+		return $address;
+	}
+
+	public function correctSenderForSubdomain ($subDomain = '')
+	{
+		$this->sender = $this->addSubDomainToAddress($this->sender, $subDomain);
+		$this->relaySender = $this->addSubDomainToAddress($this->relaySender, $subDomain);
+	}
+
+	public function getSenderDomain ()
+	{
+		$result = '';
+
+		if (XXX_Type::isArray($this->sender))
+		{
+			$addressParts = XXX_String::splitToArray($this->sender['address'], '@');
+
+			$result = $addressParts[1];
+		}
+		else
+		{
+			$addressParts = XXX_String::splitToArray($this->sender, '@');
+
+			$result = $addressParts[1];
+		}
+
+		return $result;
+	}
+
 	public function setErrorReceiver ($address, $name = '')
 	{
 		$this->errorReceiver = $this->normalizeAddressParameters($address, $name);
@@ -845,7 +937,7 @@ class XXX_Email_Composer
 	
 	public function resetErrorReceiver ()
 	{
-		$this->errorReceiver = 'error@' . $this->defaultDomain;
+		$this->errorReceiver = 'error@' . $this->customDomain;
 	}
 	
 	public function setReplyReceiver ($address, $name = '')
@@ -855,7 +947,7 @@ class XXX_Email_Composer
 	
 	public function resetReplyReceiver ()
 	{
-		$this->replyReceiver = 'reply@' . $this->defaultDomain;
+		$this->replyReceiver = 'reply@' . $this->customDomain;
 	}
 	
 	public function setReceiver ($address, $name = '')
@@ -866,6 +958,8 @@ class XXX_Email_Composer
 	public function addReceiver ($address, $name = '')
 	{
 		$this->receivers[] = $this->normalizeAddressParameters($address, $name);
+
+		XXX_Type::peakAtVariable($this->receivers);
 	}
 	
 	public function resetReceivers ()
@@ -1005,16 +1099,48 @@ class XXX_Email_Composer
 		
 		return $result;
 	}
-		
-	public function getEmailAsFileContent ()
+
+	public function getAllReceiversAsString ()
+	{
+		$this->compose();
+
+		$result = '';
+		if ($this->composed['receivers'] != '')
+		{
+			$result .= $this->composed['receivers'];
+		}
+		if ($this->composed['ccReceivers'] != '')
+		{
+			if ($result != '')
+			{
+				$result .= ',';
+			}
+			$result .= $this->composed['ccReceivers'];
+		}
+		if ($this->composed['bccReceivers'] != '')
+		{
+			if ($result != '')
+			{
+				$result .= ',';
+			}
+			$result .= $this->composed['bccReceivers'];
+		}
+
+		return $result;
+	}
+
+	public function getEmailAsMIMEString ()
 	{
 		$this->compose();
 		
 		$content = '';
+		$content .= XXX_String::removeTrailingLineSeparators($this->composed['headers']) . self::$lineSeparator;
 		$content .= 'To: ' . $this->composed['receivers'] . self::$lineSeparator;
 		$content .= 'Subject: ' . $this->composed['subject'] . self::$lineSeparator;
-		$content .= $this->composed['headers'] . self::$lineSeparator;
+		$content .= self::$lineSeparator;
 		$content .= $this->composed['body'];
+
+		echo $content;
 		
 		return $content;
 	}

@@ -2,13 +2,7 @@
 
 abstract class XXX_Email_Sender
 {
-	public static $systemSender = array
-	(
-		'name' => 'Comcordis_Email_Sender',
-		'address' => 'no-reply@server.comcordis.com'
-	);
-
-	public static $tool = 'smtp';
+	public static $method = 'smtp';
 	
 	public static function sendEmail ($email, $save = true)
 	{
@@ -16,35 +10,13 @@ abstract class XXX_Email_Sender
 		
 		if ($email)
 		{
-			// System sender
-			
-				if (XXX_String::hasPart(XXX_OperatingSystem::$hostname, '.'))
-				{
-					self::$systemSender['address'] = 'no-reply@' . XXX_OperatingSystem::$hostname;
-				}
-				
-				$tempSender = $email->getSender();
-				
-				if (XXX_Type::isArray($tempSender))
-				{
-					$tempSender = $tempSender['address'];
-				}
-				
-				$tempSender = XXX_String::replace($tempSender, '@', '.');
-				
-				$domain = XXX_String::getLastSeparatedPart(self::$systemSender['address'], '@');
-				
-				self::$systemSender['name'] = $tempSender;
-				self::$systemSender['address'] = $tempSender . '@' . $domain;
-			
-			$email->setSystemSender(self::$systemSender);
-			
-			$email->compose();
-
-			switch (self::$tool)
+			switch (self::$method)
 			{
 				case 'smtp':
+					$email->correctRelaySenderForSMTP();
 					
+					$email->compose();
+
 					// Fake sendmail doesn't work in this situation
 					if (XXX::$deploymentInformation['localDevelopmentBox'] && XXX_PHP::$executionEnvironment == 'commandLine' && XXX_OperatingSystem::$platformName == 'windows')
 					{
@@ -78,63 +50,45 @@ abstract class XXX_Email_Sender
 						ini_set('sendmail_from', self::$systemSender['address']);
 					}
 					
-					if ($save)
-					{
-						$emailAsFileContent = $email->getEmailAsFileContent();
-						
-						$timestampPartsForPath = XXX_TimestampHelpers::getTimestampPartsForPath();
-						
-						$file = 'email_' . XXX_TimestampHelpers::getTimestampPartForFile() . '_' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 8) . '.eml';
-						
-						$emailFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'sent', $timestampPartsForPath['year'], $timestampPartsForPath['month'], $timestampPartsForPath['date'], $file));
-						
-						XXX_FileSystem_Local::writeFileContent($emailFilePath, $emailAsFileContent);
-					}
-					
 					$result = mail($email->composed['receivers'], $email->composed['subject'], $email->composed['body'], $email->composed['headers']);
 					break;
 				case 'mailGunAPI':
-
-					$to = '';
-					if ($email->composed['receivers'] != '')
-					{
-						$to .= $email->composed['receivers'];
-					}
-					if ($email->composed['ccReceivers'] != '')
-					{
-						if ($to != '')
-						{
-							$to .= ',';
-						}
-						$to .= $email->composed['ccReceivers'];
-					}
-					if ($email->composed['bccReceivers'] != '')
-					{
-						if ($to != '')
-						{
-							$to .= ',';
-						}
-						$to .= $email->composed['bccReceivers'];
-					}
-
-					$message = '';
-					$message .= 'To: ' . $email->composed['receivers'] . XXX_Email_Composer::$lineSeparator;
-					$message .= 'Subject: ' . $email->composed['subject'] . XXX_Email_Composer::$lineSeparator;
-					$message .= $email->composed['headers'] . XXX_Email_Composer::$lineSeparator;
-					$message .= XXX_Email_Composer::$lineSeparator;
-					$message .= $email->composed['body'];
 					
+					$email->correctSenderForSubdomain('mg');
+
+					echo '[Before:' . $email->getSenderDomain() . ']';
+
+					$email->compose();
+
+					$temporaryFile = 'email_temporary.eml';
+					$emailTemporaryFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'temporary', $temporaryFile));
+
+					XXX_FileSystem_Local::writeFileContent($emailTemporaryFilePath, $email->getEmailAsMIMEString());
+
 					$data = array
 					(
-						'to' => $to,
-						'message' => $message
+						'to' => $email->getAllReceiversAsString(),
+						'message' => '@' . $emailTemporaryFilePath
 					);
 
-					XXX_MailGunAPI_SendEmailService::sendEmail('mg.yourairporttransfer.com', $data);
+					echo '[After:' . $email->getSenderDomain() . ']';
 
+					XXX_MailGunAPI_SendEmailService::sendEmail($email->getSenderDomain(), $data);
 
+					XXX_FileSystem_Local::deleteFile($emailTemporaryFilePath);
 					break;
 			}
+		}
+
+		if ($save)
+		{
+			$timestampPartsForPath = XXX_TimestampHelpers::getTimestampPartsForPath();
+			
+			$file = 'email_' . XXX_TimestampHelpers::getTimestampPartForFile() . '_' . XXX_String::getPart(XXX_String::getRandomHash(), 0, 8) . '.eml';
+			
+			$emailFilePath = XXX_Path_Local::extendPath(XXX_Path_Local::$deploymentDataPathPrefix, array('emails', 'sent', $timestampPartsForPath['year'], $timestampPartsForPath['month'], $timestampPartsForPath['date'], $file));
+			
+			XXX_FileSystem_Local::writeFileContent($emailFilePath, $email->getEmailAsMIMEString());
 		}
 		
 		return $result;
@@ -144,8 +98,6 @@ abstract class XXX_Email_Sender
 	{
 		$email = new XXX_Email_Composer();
 
-		$email->setSender(self::$systemSender['address'], self::$systemSender['name']);
-		
 		if (XXX_Type::isArray($receiver))
 		{
 			foreach ($receiver as $tempReceiver)
@@ -160,7 +112,6 @@ abstract class XXX_Email_Sender
 		
 		$email->setSubject($subject);
 		$email->setBody($body, 'html');
-		
 		$email->send();
 	}
 	
