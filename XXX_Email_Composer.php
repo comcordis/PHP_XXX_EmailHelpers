@@ -65,7 +65,7 @@ class XXX_Email_Composer
 	public $overwrittenTimestamp = false;
 	
 	// $relaySender on behalf of $sender
-	protected $sender = '';
+	public $sender = '';
 	protected $relaySender = '';
 	
 	protected $errorReceiver = '';
@@ -904,7 +904,7 @@ class XXX_Email_Composer
 		return $address;
 	}
 
-	public function correctSenderForSubdomain ($subDomain = '')
+	public function correctSenderForSubDomain ($subDomain = '')
 	{
 		$this->sender = $this->addSubDomainToAddress($this->sender, $subDomain);
 		$this->relaySender = $this->addSubDomainToAddress($this->relaySender, $subDomain);
@@ -1102,28 +1102,30 @@ class XXX_Email_Composer
 
 	public function getAllReceiversAsString ()
 	{
-		$this->compose();
+		$composedReceivers = XXX_Array::joinValuesToString($this->composeAddresses($this->receivers), ',');
+		$composedCCReceivers = XXX_Array::joinValuesToString($this->composeAddresses($this->ccReceivers), ',');
+		$composedBCCReceivers = XXX_Array::joinValuesToString($this->composeAddresses($this->bccReceivers), ',');
 
 		$result = '';
-		if ($this->composed['receivers'] != '')
+		if ($composedReceivers != '')
 		{
-			$result .= $this->composed['receivers'];
+			$result .= $composedReceivers;
 		}
-		if ($this->composed['ccReceivers'] != '')
+		if ($composedCCReceivers != '')
 		{
 			if ($result != '')
 			{
 				$result .= ',';
 			}
-			$result .= $this->composed['ccReceivers'];
+			$result .= $composedCCReceivers;
 		}
-		if ($this->composed['bccReceivers'] != '')
+		if ($composedBCCReceivers != '')
 		{
 			if ($result != '')
 			{
 				$result .= ',';
 			}
-			$result .= $this->composed['bccReceivers'];
+			$result .= $composedBCCReceivers;
 		}
 
 		return $result;

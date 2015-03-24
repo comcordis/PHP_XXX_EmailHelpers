@@ -2,6 +2,10 @@
 
 abstract class XXX_Email_Sender
 {
+	public static $intercept = false;
+	public static $interceptReceiver = '';
+	public static $interceptSubjectPrefix = 'Intercepted email for "%originalReceivers%" in %deployEnvironment% - ';
+
 	public static $method = 'smtp';
 	
 	public static function sendEmail ($email, $save = true)
@@ -10,6 +14,17 @@ abstract class XXX_Email_Sender
 		
 		if ($email)
 		{
+			if (self::$intercept)
+			{
+				$email->resetReceivers();
+				$email->resetCCReceivers();
+				$email->resetBCCReceivers();
+
+				$email->addReceiver(self::$interceptReceiver);
+
+				$email->prependSubject(XXX_String::replaceVariables(self::$interceptSubjectPrefix, array('originalReceivers', 'deployEnvironment'), array($email->getAllReceiversAsString(), XXX::$deploymentInformation['deployEnvironment'])));
+			}
+
 			switch (self::$method)
 			{
 				case 'smtp':
@@ -53,10 +68,15 @@ abstract class XXX_Email_Sender
 					$result = mail($email->composed['receivers'], $email->composed['subject'], $email->composed['body'], $email->composed['headers']);
 					break;
 				case 'mailGunAPI':
-					
-					$email->correctSenderForSubdomain('mg');
-
-					echo '[Before:' . $email->getSenderDomain() . ']';
+					echo 'A';
+					echo '{{';
+					XXX_Type::peakAtVariable($email->sender);
+					echo '}}'; 
+					$email->correctSenderForSubDomain('mg');
+					echo '{{';
+					XXX_Type::peakAtVariable($email->sender);
+					echo '}}'; 
+					echo 'B';
 
 					$email->compose();
 
@@ -70,8 +90,6 @@ abstract class XXX_Email_Sender
 						'to' => $email->getAllReceiversAsString(),
 						'message' => '@' . $emailTemporaryFilePath
 					);
-
-					echo '[After:' . $email->getSenderDomain() . ']';
 
 					XXX_MailGunAPI_SendEmailService::sendEmail($email->getSenderDomain(), $data);
 
