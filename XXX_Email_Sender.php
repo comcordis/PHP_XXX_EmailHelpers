@@ -68,15 +68,7 @@ abstract class XXX_Email_Sender
 					$result = mail($email->composed['receivers'], $email->composed['subject'], $email->composed['body'], $email->composed['headers']);
 					break;
 				case 'mailGunAPI':
-					echo 'A';
-					echo '{{';
-					XXX_Type::peakAtVariable($email->sender);
-					echo '}}'; 
 					$email->correctSenderForSubDomain('mg');
-					echo '{{';
-					XXX_Type::peakAtVariable($email->sender);
-					echo '}}'; 
-					echo 'B';
 
 					$email->compose();
 
