@@ -1,0 +1,6 @@
+project:XXX_EmailHelpers_PHP
+deployEnvironment:development
+checkout:master
+commitHash:e08bd683f1697aa5842684b11218608ee82d3bae
+timestamp:2015-04-13T09:44:14Z
+deployer:operations
