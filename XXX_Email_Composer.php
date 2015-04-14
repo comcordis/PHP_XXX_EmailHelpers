@@ -959,7 +959,7 @@ class XXX_Email_Composer
 	{
 		$this->receivers[] = $this->normalizeAddressParameters($address, $name);
 
-		XXX_Type::peakAtVariable($this->receivers);
+		//XXX_Type::peakAtVariable($this->receivers);
 	}
 	
 	public function resetReceivers ()
@@ -1142,7 +1142,7 @@ class XXX_Email_Composer
 		$content .= self::$lineSeparator;
 		$content .= $this->composed['body'];
 
-		echo $content;
+		//echo $content;
 		
 		return $content;
 	}
