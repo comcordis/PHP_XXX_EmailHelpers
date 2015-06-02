@@ -792,7 +792,7 @@ class XXX_Email_Composer
 	{
 		$result = array();
 		
-		if (XXX_Type::isArray($address))
+		if (XXX_Type::isAssociativeArray($address))
 		{
 			if ($address['address'] != '')
 			{

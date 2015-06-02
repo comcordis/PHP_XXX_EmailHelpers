@@ -3,7 +3,7 @@
 abstract class XXX_Email_Sender
 {
 	public static $intercept = false;
-	public static $interceptReceiver = '';
+	public static $interceptReceivers = array();
 	public static $interceptSubjectPrefix = 'Intercepted email for "%originalReceivers%" in %deployEnvironment% - ';
 
 	public static $method = 'smtp';
@@ -20,7 +20,10 @@ abstract class XXX_Email_Sender
 				$email->resetCCReceivers();
 				$email->resetBCCReceivers();
 
-				$email->addReceiver(self::$interceptReceiver);
+				foreach (self::$interceptReceivers as $interceptReceiver)
+				{
+					$email->addReceiver($interceptReceiver);
+				}
 
 				$email->prependSubject(XXX_String::replaceVariables(self::$interceptSubjectPrefix, array('originalReceivers', 'deployEnvironment'), array($email->getAllReceiversAsString(), XXX::$deploymentInformation['deployEnvironment'])));
 			}
